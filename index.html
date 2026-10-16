@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827"><title>Sherlock AI — личный поиск</title>
+<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top"><div class="brandmark">⌕</div><div><h1>SHERLOCK <span>AI</span></h1><p>Личный центр открытых данных</p></div><div class="private">ЛИЧНЫЙ</div></header>
+<main>
+<section class="hero"><p class="eyebrow">OSINT WORKSPACE</p><h2>Что будем<br><em>проверять?</em></h2><p class="sub">Поиск публичных упоминаний номера с отображением найденных страниц.</p></section>
+<section class="categories" id="categories">
+<button class="category selected" data-mode="phone"><span>☎</span><b>Телефон</b><small>Формат и публичные упоминания</small></button>
+<button class="category" data-mode="vehicle"><span>▣</span><b>Автомобиль</b><small>VIN и публичная история</small></button>
+<button class="category" data-mode="social"><span>◎</span><b>Соцсети</b><small>Публичные профили</small></button>
+<button class="category" data-mode="company"><span>▤</span><b>Компания</b><small>ИНН, ОГРН и реестры</small></button>
+<button class="category" data-mode="domain"><span>⌘</span><b>Домен / IP</b><small>DNS и регистрационные данные</small></button>
+<button class="category" data-mode="geo"><span>⌖</span><b>GeoAI</b><small>Место по фотографии</small></button>
+</section>
+<section class="searchcard">
+<div class="sectionhead"><div><p class="eyebrow">НОВЫЙ ПОИСК</p><h3 id="formTitle">Проверка телефона</h3></div><div class="step">v0.8</div></div>
+<label for="query" id="queryLabel">Номер телефона</label><input id="query" autocomplete="off" placeholder="+7 999 123-45-67">
+<p class="hint" id="hint">Введи номер в международном формате, например +79991234567. Найдём публичные страницы, где он может упоминаться.</p>
+<div id="uploadArea" hidden><label for="photo">Фотография места</label><input id="photo" type="file" accept="image/*"><p class="hint">Визуальная геолокация появится после подключения сервиса анализа изображений.</p></div>
+<button class="primary" id="searchBtn">Проверить запрос <span>→</span></button>
+<p class="disclaimer">Результаты должны подтверждаться источниками. Закрытые базы не подключены.</p>
+</section>
+<section class="results" id="results" hidden><div class="sectionhead"><div><p class="eyebrow">РЕЗУЛЬТАТ</p><h3 id="resultTitle">Проверка</h3></div><button class="clear" id="closeResult">Закрыть</button></div><div id="resultBody"></div></section>
+<section class="history"><div class="sectionhead"><div><p class="eyebrow">НА ЭТОМ УСТРОЙСТВЕ</p><h3>История</h3></div><button class="clear" id="clearHistory">Очистить</button></div><div id="historyList" class="historylist"><p class="empty">Пока нет сохранённых запросов.</p></div></section>
+<section class="safety"><b>Приватность</b><p>История хранится локально в браузере. Не вводи чужие пароли, паспортные данные и другие закрытые сведения.</p></section>
+</main><footer>SHERLOCK AI · PERSONAL MVP · v0.8</footer><script src="app.js?v=04"></script></body></html>
