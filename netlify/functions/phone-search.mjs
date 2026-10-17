@@ -23,7 +23,7 @@ export default async (request) => {
 
   try {
     const url = new URL(request.url);
-    let phone = url.searchParams.get("phone") || "";
+    let phone = url.searchParams.get("phone") || url.searchParams.get("q") || "";
 
     if (request.method === "POST") {
       const body = await request.json();
