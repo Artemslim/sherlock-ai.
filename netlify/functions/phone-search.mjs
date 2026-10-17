@@ -20,10 +20,8 @@ export default async (request) => {
 
   try {
     const url = new URL(request.url);
-    let query =
-      url.searchParams.get("q") ||
-      url.searchParams.get("phone") ||
-      "";
+    let query = url.searchParams.get("q") ||
+      url.searchParams.get("phone") || "";
 
     if (request.method === "POST") {
       const body = await request.json();
@@ -42,22 +40,22 @@ export default async (request) => {
 
     const digits = query.replace(/\D/g, "");
     const isPhone = digits.length >= 7 && digits.length <= 15;
-    const queries = isPhone
+    const variants = isPhone
       ? [...new Set([query, digits, "+" + digits])]
       : [query];
 
-    const allResults = [];
+    const collected = [];
     const errors = [];
 
-    for (const searchQuery of queries) {
+    for (const variant of variants) {
       const searchUrl = new URL("https://plumbsearch.org/search");
-      searchUrl.searchParams.set("q", searchQuery);
+      searchUrl.searchParams.set("q", variant);
       searchUrl.searchParams.set("format", "json");
 
       try {
         const response = await fetch(searchUrl, {
-          headers: { "Accept": "application/json" },
-          signal: AbortSignal.timeout(10000)
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(8000)
         });
 
         if (!response.ok) {
@@ -68,78 +66,65 @@ export default async (request) => {
         const data = await response.json();
 
         for (const item of data.results || []) {
-          if (!item.url || !item.title) continue;
+          if (!item.title || !item.url) continue;
 
-          let parsedUrl;
+          let parsed;
           try {
-            parsedUrl = new URL(item.url);
+            parsed = new URL(item.url);
           } catch {
             continue;
           }
 
-          if (!["http:", "https:"].includes(parsedUrl.protocol)) continue;
+          if (!["https:", "http:"].includes(parsed.protocol)) continue;
 
-          const title = String(item.title).trim();
-          const snippet = String(item.content || item.snippet || "").trim();
+          const title = String(item.title);
+          const snippet = String(item.content || item.snippet || "");
+          const textDigits = (title + " " + snippet).replace(/\D/g, "");
 
-          if (!title) continue;
+          // Для телефона нужны совпадения в тексте результата.
+          if (isPhone && !textDigits.includes(digits)) continue;
 
-          const combined = (title + " " + snippet).toLowerCase();
-          const spamWords = [
-            "win money", "casino bonus", "betting tips",
-            "ganhe até", "clique para ganhar"
-          ];
+          const spam = /casino bonus|betting tips|ganhe até|clique para ganhar/i;
+          if (spam.test(title + " " + snippet)) continue;
 
-          if (spamWords.some(word => combined.includes(word))) continue;
-
-          allResults.push({
-            title,
-            url: parsedUrl.href,
-            snippet
+          collected.push({
+            title: title.trim(),
+            url: parsed.href,
+            snippet: snippet.trim()
           });
         }
       } catch (error) {
         errors.push(
-          error.name === "TimeoutError" ? "Тайм-аут поиска" : "Ошибка соединения"
+          error.name === "TimeoutError" ? "Тайм-аут" : "Ошибка соединения"
         );
       }
     }
 
     const seen = new Set();
-    const results = [];
-
-    for (const item of allResults) {
-      const key = item.url
-        .toLowerCase()
-        .replace(/^https?:\/\//, "")
-        .replace(/^www\./, "")
-        .replace(/\/$/, "");
-
-      if (seen.has(key)) continue;
+    const results = collected.filter(item => {
+      const key = item.url.toLowerCase().replace(/\/$/, "");
+      if (seen.has(key)) return false;
       seen.add(key);
-
-      results.push(item);
-    }
+      return true;
+    }).slice(0, 10);
 
     return respond(200, {
       query,
       count: results.length,
-      results: results.slice(0, 10),
+      results,
       message: results.length
-        ? "Найдены публичные страницы. Проверь каждое совпадение вручную."
+        ? "Найдены страницы с совпадением в тексте результата"
         : errors.length
-          ? "Поисковый сервис временно не вернул результаты."
-          : "Подходящие публичные страницы не найдены.",
+          ? "Поисковый сервис не ответил. Попробуйте позже."
+          : "Точных совпадений в заголовках и описаниях не найдено.",
       warning: isPhone
-        ? "Результаты не подтверждают владельца или активность номера."
-        : "Результаты поиска требуют самостоятельной проверки."
+        ? "Отсутствие совпадений не означает, что номер нигде не опубликован."
+        : "Результаты требуют самостоятельной проверки."
     });
   } catch (error) {
     return respond(502, {
       error: "Ошибка публичного поиска",
-      details: error.name === "TimeoutError"
-        ? "Истекло время ожидания"
-        : error.message || "Поисковый сервер не ответил"
+      details: error.message || "Поисковый сервер не ответил"
     });
   }
 };
