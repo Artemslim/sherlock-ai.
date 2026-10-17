@@ -7,9 +7,9 @@ export default async (request) => {
     "Access-Control-Allow-Headers": "Content-Type"
   };
 
-  const respond = (statusCode, data) =>
+  const respond = (status, data) =>
     new Response(JSON.stringify(data), {
-      status: statusCode,
+      status,
       headers
     });
 
@@ -23,64 +23,64 @@ export default async (request) => {
 
   try {
     const url = new URL(request.url);
-    let phone = url.searchParams.get("phone") || url.searchParams.get("q") || "";
+    let query = url.searchParams.get("q") ||
+                url.searchParams.get("phone") || "";
 
     if (request.method === "POST") {
       const body = await request.json();
-      phone = body.phone || "";
+      query = body.q || body.phone || query;
     }
 
-    phone = String(phone).trim();
+    query = String(query).trim();
 
-    if (!phone) {
-      return respond(400, { error: "Укажите номер телефона" });
+    if (!query) {
+      return respond(400, { error: "Укажите поисковый запрос" });
     }
 
-    const digits = phone.replace(/\D/g, "");
-
-    if (digits.length < 7 || digits.length > 15) {
-      return respond(400, { error: "Некорректная длина номера" });
+    if (query.length > 200) {
+      return respond(400, { error: "Запрос слишком длинный" });
     }
 
-    const query = `"${phone}"`;
-    const searchUrl = new URL("https://searx.be/search");
+    const searchUrl = new URL("https://plumbsearch.org/search");
     searchUrl.searchParams.set("q", query);
     searchUrl.searchParams.set("format", "json");
-    searchUrl.searchParams.set("language", "ru-RU");
 
     const response = await fetch(searchUrl, {
-      headers: { "User-Agent": "SherlockAI/1.0" },
-      signal: AbortSignal.timeout(12000)
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(15000)
     });
 
     if (!response.ok) {
       return respond(502, {
-        error: "Публичный поисковый сервер недоступен",
+        error: "Поисковый сервер недоступен",
         providerStatus: response.status
       });
     }
 
     const data = await response.json();
-    const results = (data.results || []).slice(0, 10).map((item) => ({
-      title: item.title || "",
-      url: item.url || "",
-      snippet: item.content || ""
-    }));
+    const results = (data.results || [])
+      .slice(0, 10)
+      .map(item => ({
+        title: item.title || "",
+        url: item.url || "",
+        snippet: item.content || item.snippet || ""
+      }))
+      .filter(item => item.title && item.url);
 
     return respond(200, {
-      phone,
+      query,
       count: results.length,
       results,
       message: results.length
-        ? "Найдены публичные упоминания"
-        : "Публичные упоминания не найдены"
+        ? "Найдены публичные страницы"
+        : "Результаты не найдены"
     });
   } catch (error) {
     return respond(502, {
       error: "Ошибка публичного поиска",
       details: error.name === "TimeoutError"
         ? "Истекло время ожидания"
-        : "Поисковый сервер не ответил"
+        : error.message || "Поисковый сервер не ответил"
     });
   }
 };
